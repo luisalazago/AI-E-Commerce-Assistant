@@ -1,3 +1,8 @@
+"""
+This project is made by Luis Alberto Salazar.
+You can find the repository in: https://github.com/luisalazago/AI-E-Commerce-Assistant
+"""
+
 from flask import Flask, render_template, url_for
 import assistant.e_commerceAssistantAI
 

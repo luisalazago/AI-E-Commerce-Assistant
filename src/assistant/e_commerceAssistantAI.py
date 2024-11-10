@@ -1,3 +1,8 @@
+"""
+This project is made by Luis Alberto Salazar.
+You can find the repository in: https://github.com/luisalazago/AI-E-Commerce-Assistant
+"""
+
 # Libraries used.
 import openai
 import os
