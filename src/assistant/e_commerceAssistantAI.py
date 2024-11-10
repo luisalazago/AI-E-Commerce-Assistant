@@ -1,126 +1,150 @@
 # Libraries used.
-from openai import OpenAI
-from typing_extensions import override
-from openai import AssistantEventHandler
-
+import openai
 import os
 import json
 from dotenv import load_dotenv
 load_dotenv()
 
 # Api Key used to OpenAI.
-OPENAI_API_KEY = os.environ.get("api_key")
-client = OpenAI(api_key = OPENAI_API_KEY)
+openai.api_key = os.environ.get("api_key")
 
 # Products of the store.
 catalogue = open("product_catalogue.json", "r")
 catalogue = json.load(catalogue)
 
-# Functions to call from the model.
-def getProductInfo(product_name: str):
-    return catalogue[product_name]
+# Functions to call from the model (The catalogue is JSON file).
+def getProductInfo(product_name: str, product_attribute: str):
+    return catalogue[product_name][product_attribute]
 
 def getProductNames():
-    names = []
+    names = "" # Add the names to a temporary string to return.
     for product in catalogue:
-        names.append(product["name"])
+        names += catalogue[product]["name"]
     return names
 
 def checkStock(product_name: str):
     return catalogue[product_name]["stock"]
 
+def checkName(product_name: str):
+    return product_name in catalogue
+
 # Virtual assistant to interact with the customer.
-assistant = client.beta.assistants.create(
-    name="SassySales",
-    instructions="You are a personal store assistant that helps users with their questions about products of the store, the store sells cellphones. Analyze the information about the products and give the customer an answer using this information. Also at the end of an answer give them a short recomendation about the product or products asked.",
-    tools=[
-        {
-            "type": "function",
-            "function": {
-                "name": "getProductInfo",
-                "description": "Get the product information for a customer's question. Call this whenever you need to know a product information, for example when a customer asks 'What is the cheapest product?'",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "product_name": {
-                            "type": "string",
-                            "description": "The product name gave from the customer."
-                        }   
-                    },
-                    "required": ["product_name"],
-                    "additionalProperties": False
+def get_assistant_answer(messages, model = "gpt-4o", tools = None, tool_choice = None):
+    assistant = openai.chat.completions.create(
+        model = model,
+        messages = messages,
+        tools = tools,
+        tool_choice = tool_choice
+    )
+    return assistant.choices[0].message
+
+# Main function to run the interface.
+def main(prompt_user):
+    # Tools to pass to the assistant
+    tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "getProductInfo",
+                    "description": "Get the product information for a customer's question. Call this whenever you need to know a product information such as price, description, name, stock and product id, for example when a customer asks 'What is the cheapest product?'",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "product_name": {
+                                "type": "string",
+                                "description": "The product name gave from the customer."
+                            },
+                            "product_attribute": {
+                                "type": "string",
+                                "description": "The specific product attribute that the customer wants to know."
+                            }  
+                        },
+                        "required": ["product_name", "product_attribute"],
+                        "additionalProperties": False
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "checkStock",
+                    "description": "Get the stock value of a product for a customer's question. Call this whenever you need to know the stock of a product",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "product_name": {
+                                "type": "string",
+                                "description": "The product name gave from the customer."
+                            }   
+                        },
+                        "required": ["product_name"],
+                        "additionalProperties": False
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "getProductNames",
+                    "description": "Get the name of the products for a customer's question. Call this whenever you need to know the names of the products from the store, for example when a customer asks 'Which products the store sells?'",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {},
+                        "required": [],
+                        "additionalProperties": False
+                    }
                 }
             }
-        },
+    ]
+
+    # Messages from the user. The message default is for make the model understand that is a sales assistant.
+    messages = [{"role": "system", "content": "You are SassySales, you are a helpful customer assistant that assist the customer answering their questions using the supplied tools, at the end of each answer recommend with a short text the product asked or many products if the customer asked for many of them."}]
+    messages.append(
         {
-            "type": "function",
-            "function": {
-                "name": "checkStock",
-                "description": "Get the stock value of a product for a customer's question. Call this whenever you need to know the stock of a product",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "product_name": {
-                            "type": "string",
-                            "description": "The product name gave from the customer."
-                        }   
-                    },
-                    "required": ["product_name"],
-                    "additionalProperties": False
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "getProductNames",
-                "description": "Get the name of the products for a customer's question. Call this whenever you need to know the names of the products from the store, for example when a customer asks 'Which products the store sells?'",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                    "additionalProperties": False
-                }
-            }
+            "role": "user",
+            "content": prompt_user
         }
-    ],
-    model="gpt-4o",
-)
+    )
 
-thread = client.beta.threads.create()
+    # Get the function called by first time to generate a tool call.
+    response = get_assistant_answer(messages, tools = tools, tool_choice = "auto")
+    response = json.loads(response.model_dump_json())
 
-response_message = ""
-run = None
+    # This conditional is for the user in case input a promnpt that not use a function call.
+    if response["tool_calls"] != None:
+        # Delete the function call to add the message to the list of messages and then, add the result of the function calling.
+        response["content"] = str(response["tool_calls"][0]["function"])
+        del response["function_call"]
 
-message = client.beta.threads.messages.create(
-    thread_id=thread.id,
-    role="user",
-    content="Which products do you sell?"
-)
+    messages.append(response)
 
-run = client.beta.threads.runs.create_and_poll(
-    thread_id=thread.id,
-    assistant_id=assistant.id,
-    instructions="Please address the user as Customer. The user has a premium account."
-)
-
-print(run)
+    if response["tool_calls"] != None:
+        ans_func = None
+        function_name = response["tool_calls"][0]["function"]["name"]
         
-while response_message == "":
-    print("Iteration")
-    if run.status == "requires_action":
-        run = client.beta.threads.runs.submit_tool_outputs_and_poll(
-            thread_id=run.thread_id,
-            run_id=run.id,
-            tool_outputs=[
-                {
-                    "tool_call_id": run.required_action.submit_tool_outputs.tool_calls[0].id,
-                    "output": response_message
-                }
-            ]
+        # This conditional analyze which function is need to call.
+        if function_name == "getProductNames": ans_func = getProductNames()
+        else:
+            params = json.loads(response["tool_calls"][0]["function"]["arguments"])
+            name = params["product_name"]
+            check = checkName(name) # Check if the name passed by the customer is correct in the catalogue.
+            if check:
+                if function_name == "getProductInfo":
+                    attribute = params["product_attribute"]
+                    ans_func = getProductInfo(name, attribute)
+                elif function_name == "checkStock": ans_func = checkStock(name)
+            else: return "Invalid name, please enter the correct name shown by the cards."
+
+        # Add a new message with the result of the function call to inform the assistant.
+        messages.append(
+            {
+                "role": "tool",
+                "tool_call_id": response["tool_calls"][0]["id"],
+                "name": function_name,
+                "content": ans_func
+            }
         )
-            
-    if run.status == "completed":
-        messages = client.beta.threads.messages.list(thread_id=thread.id)
-        response_message = messages.data[0].content[0].text
-        print(response_message)
+
+    # At the end we generate the final answer using the messages again to get the answer with the function called.
+    response = get_assistant_answer(messages, tools = tools)
+    return response.content

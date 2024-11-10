@@ -1,6 +1,8 @@
 from flask import Flask, render_template, url_for
+import assistant.e_commerceAssistantAI
 
 app = Flask(__name__)
+assistant = assistant.e_commerceAssistantAI
 
 @app.route("/")
 def home():
