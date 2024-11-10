@@ -1,5 +1,5 @@
 {
-    "Moto G84 5G": {
+    "Moto G84": {
         "product_id": "M0001",
         "name": "Moto G84",
         "description": "This is medium gamma phone by Motorola, has 8GB RAM, 50MP back camera, 16MP front camera, Android 13, 256GB capacity, screen pOLED of 1080 x 2400, refresh rate of 120Hz.",
@@ -7,7 +7,7 @@
         "stock": "20"
     },
     
-    "iPhone 16 5G": {
+    "iPhone 16": {
         "product_id": "X0001",
         "name": "iPhone 16",
         "description": "This is a premiun phone by Apple, has capacity of 512GB, screen by 1179 x 2556 OLED, 48 MP back camera, 12MP front camera, iOS 18, 8GB RAM.",
@@ -23,7 +23,7 @@
         "stock": "10"
     },
 
-    "iPhone 15 5G": {
+    "iPhone 15": {
         "product_id": "X0002",
         "name": "iPhone 15",
         "description": "This is a premiun phone by Apple, has capacity of 512GB, screen by 1179 x 2556 OLED, 48MP back camera, 12MP front camera, 8GB RAM, iOS 18.",
@@ -31,7 +31,7 @@
         "stock": "12"
     },
 
-    "Samsung S24 Ultra 5G": {
+    "Samsung S24 Ultra": {
         "product_id": "X0003",
         "name": "Samsung S24 Utral",
         "description": "This is a premiun phone by Samsung, has 256GB capacity, 200MP back camera, 12MP front camera, 12GB RAM, screen by 1440 x 3120 pOLED, refresh rate 120Hz, Android 14.",

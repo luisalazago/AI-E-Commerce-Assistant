@@ -13,8 +13,8 @@ catalogue = open("product_catalogue.json", "r")
 catalogue = json.load(catalogue)
 
 # Functions to call from the model (The catalogue is JSON file).
-def getProductInfo(product_name: str, product_attribute: str):
-    return catalogue[product_name][product_attribute]
+def getProductInfo(product_name: str):
+    return str(catalogue[product_name])
 
 def getProductNames():
     names = "" # Add the names to a temporary string to return.
@@ -53,13 +53,9 @@ def main(prompt_user):
                             "product_name": {
                                 "type": "string",
                                 "description": "The product name gave from the customer."
-                            },
-                            "product_attribute": {
-                                "type": "string",
-                                "description": "The specific product attribute that the customer wants to know."
-                            }  
+                            },  
                         },
-                        "required": ["product_name", "product_attribute"],
+                        "required": ["product_name"],
                         "additionalProperties": False
                     }
                 }
@@ -129,11 +125,9 @@ def main(prompt_user):
             name = params["product_name"]
             check = checkName(name) # Check if the name passed by the customer is correct in the catalogue.
             if check:
-                if function_name == "getProductInfo":
-                    attribute = params["product_attribute"]
-                    ans_func = getProductInfo(name, attribute)
+                if function_name == "getProductInfo": ans_func = getProductInfo(name)
                 elif function_name == "checkStock": ans_func = checkStock(name)
-            else: return "Invalid name, please enter the correct name shown by the cards."
+            else: return "Invalid name, please enter the correct name."
 
         # Add a new message with the result of the function call to inform the assistant.
         messages.append(
