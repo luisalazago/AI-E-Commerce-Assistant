@@ -56,6 +56,86 @@ In this file you will find the logic and the implementation of the assistant. Th
 messages = [{"role": "system", "content": "You are SassySales, you are a helpful customer assistant that assist the customer answering their questions using the supplied tools, at the end of each answer recommend with a short text the product asked or many products if the customer asked for many of them."}]
 ```
 
+In the tools part the model use three functions to call next (in case the user needs the information). The three functions are
+
+```py
+# Functions to call from the model (The catalogue is JSON file).
+def getProductInfo(product_name: str):
+    return str(catalogue[product_name])
+
+def getProductNames():
+    names = "" # Add the names to a temporary string to return.
+    for product in catalogue:
+        names += catalogue[product]["name"]
+    return names
+
+def checkStock(product_name: str):
+    return catalogue[product_name]["stock"]
+```
+
+But the program has a extra function to check if the name passed from the user it is correct for the model when it will use it.
+
+```py
+def checkName(product_name: str):
+    return product_name in catalogue
+```
+
+The tools made for the model are
+
+```py
+tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "getProductInfo",
+                    "description": "Get the product information for a customer's question. Call this whenever you need to know a product information such as price, description, name, stock and product id, for example when a customer asks 'What is the cheapest product?'",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "product_name": {
+                                "type": "string",
+                                "description": "The product name gave from the customer."
+                            },  
+                        },
+                        "required": ["product_name"],
+                        "additionalProperties": False
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "checkStock",
+                    "description": "Get the stock value of a product for a customer's question. Call this whenever you need to know the stock of a product",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "product_name": {
+                                "type": "string",
+                                "description": "The product name gave from the customer."
+                            }   
+                        },
+                        "required": ["product_name"],
+                        "additionalProperties": False
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "getProductNames",
+                    "description": "Get the name of the products for a customer's question. Call this whenever you need to know the names of the products from the store, for example when a customer asks 'Which products the store sells?'",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {},
+                        "required": [],
+                        "additionalProperties": False
+                    }
+                }
+            }
+    ]
+```
+
 Also we execute the model to get a call id, with this call the model do a calling function (if prompt requires it).
 
 ```py
