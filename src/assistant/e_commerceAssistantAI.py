@@ -5,7 +5,6 @@ from openai import AssistantEventHandler
 
 import os
 import json
-import asyncio
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -22,10 +21,10 @@ def getProductInfo(product_name: str):
     return catalogue[product_name]
 
 def getProductNames():
-    temp = []
+    names = []
     for product in catalogue:
-        temp.append(product["name"])
-    return temp
+        names.append(product["name"])
+    return names
 
 def checkStock(product_name: str):
     return catalogue[product_name]["stock"]
@@ -90,44 +89,38 @@ assistant = client.beta.assistants.create(
 
 thread = client.beta.threads.create()
 
-async def submit_message():
-    response_message = ""
-    run = None
-    
-    try:
-        message = await client.beta.threads.messages.create(
-            thread_id=thread.id,
-            role="user",
-            content="What is the price of the iPhone 16?"
-        )
+response_message = ""
+run = None
 
-        run = await client.beta.threads.runs.create_and_poll(
-            thread_id=thread.id,
-            assistant_id=assistant.id,
-            instructions="Please address the user as Customer. The user has a premium account."
-        )
+message = client.beta.threads.messages.create(
+    thread_id=thread.id,
+    role="user",
+    content="Which products do you sell?"
+)
 
-        #print(run)
-        while response_message == "":
-            print("Iteration")
-            if run.status == "requires_action":
-                run = await client.beta.threads.runs.submit_tool_outputs_and_poll(
-                    thread_id=run.thread_id,
-                    run_id=run.id,
-                    tool_outputs=[
-                        {
-                            "tool_call_id": run.required_action.submit_tool_outputs.tool_calls[0].id,
-                            "output": response_message
-                        }
-                    ]
-                )
+run = client.beta.threads.runs.create_and_poll(
+    thread_id=thread.id,
+    assistant_id=assistant.id,
+    instructions="Please address the user as Customer. The user has a premium account."
+)
+
+print(run)
+        
+while response_message == "":
+    print("Iteration")
+    if run.status == "requires_action":
+        run = client.beta.threads.runs.submit_tool_outputs_and_poll(
+            thread_id=run.thread_id,
+            run_id=run.id,
+            tool_outputs=[
+                {
+                    "tool_call_id": run.required_action.submit_tool_outputs.tool_calls[0].id,
+                    "output": response_message
+                }
+            ]
+        )
             
-            if run.status == "completed":
-                messages = client.beta.threads.messages.list(thread_id=thread.id)
-                response_message = messages.data[0].content[0].text
-                print(response_message)
-    
-    except Exception as e:
-        exit(0)
-
-asyncio.run(submit_message())
+    if run.status == "completed":
+        messages = client.beta.threads.messages.list(thread_id=thread.id)
+        response_message = messages.data[0].content[0].text
+        print(response_message)
